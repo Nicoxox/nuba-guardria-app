@@ -9,26 +9,7 @@
 <body>
   <div id="app"></div>
 
-
-  <!-- Firebase App (core) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <!-- Firestore -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script>
-    // Configuración de Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyDFxvXRr3cOBCHRuvSIclYrTJhuHvNrFGc",
-      authDomain: "nuba-app-9fc14.firebaseapp.com",
-      projectId: "nuba-app-9fc14",
-      storageBucket: "nuba-app-9fc14.appspot.com",
-      messagingSenderId: "29493776320",
-      appId: "1:29493776320:web:244cdae5a60853693f0225"
-    };
-    // Inicializar Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    let unsubscribe = null;
-
     // ===== DOM Helper =====
     const el = (tag, attrs = {}, children = []) => {
       const node = document.createElement(tag);
@@ -65,7 +46,7 @@
       tareasFilter: "todas",
       modal: null,
       selectedPerroId: null,
-      tarifa: { precioNoche: 60000, precioTemporada: 0 },
+      tarifa: { precioNoche: 60, precioTemporada: 0 },
       perros: [
         {
           id: 1,
@@ -75,7 +56,6 @@
           cliente_telefono: "555-1234",
           cliente_email: "maria@example.com",
           etiquetas: ["Dieta", "Sociable"],
-          tamano: "Mediano",
           adjuntos: [{ id: 1, nombre: "vacunas_Luna.pdf", tipo: "Certificado de Vacunas" }]
         },
         {
@@ -86,7 +66,6 @@
           cliente_telefono: "555-5678",
           cliente_email: "carlos@example.com",
           etiquetas: ["Ansiedad", "Habitación individual"],
-          tamano: "Grande",
           adjuntos: []
         },
         {
@@ -97,7 +76,6 @@
           cliente_telefono: "555-9012",
           cliente_email: "lucia@example.com",
           etiquetas: ["Medicación", "Juguetón"],
-          tamano: "Pequeño",
           adjuntos: [{ id: 2, nombre: "ficha_medica_Toby.pdf", tipo: "Ficha Médica" }]
         }
       ],
@@ -131,32 +109,29 @@
         {
           id: 1,
           perroId: 1,
-          monto: 300000,
-          montoEntregado: 0,
+          monto: 240,
           vence: "2025-12-10",
           estado: "pendiente",
           hospedajeId: 1,
-          notas: "Pago por hospedaje 5 noches"
+          notas: "Pago por hospedaje 4 noches"
         },
         {
           id: 2,
           perroId: 2,
-          monto: 360000,
-          montoEntregado: 0,
+          monto: 300,
           vence: "2025-12-12",
           estado: "pendiente",
           hospedajeId: 2,
-          notas: "Pago por hospedaje 6 noches"
+          notas: "Pago por hospedaje 5 noches"
         },
         {
           id: 3,
           perroId: 3,
-          monto: 180000,
-          montoEntregado: 0,
+          monto: 120,
           vence: "2025-12-07",
           estado: "pagado",
           hospedajeId: 3,
-          notas: "Pago por hospedaje 3 noches"
+          notas: "Pago por hospedaje 2 noches"
         }
       ],
       tareas: [
@@ -212,81 +187,16 @@
       a.getMonth() === b.getMonth() &&
       a.getDate() === b.getDate();
 
-    // Calcular número de noches entre fechas (por noche)
-    const calcularNoches = (desde, hasta) => {
+    const calcularDias = (desde, hasta) => {
       const d1 = new Date(desde);
       const d2 = new Date(hasta);
-      const msPerDay = 1000 * 60 * 60 * 24;
-      const diff = Math.floor((d2 - d1) / msPerDay);
-      return Math.max(1, diff);
+      return Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
     };
 
     const calcularMonto = (desde, hasta, tarifa = state.tarifa.precioNoche) => {
-      const noches = calcularNoches(desde, hasta);
-      return noches * tarifa;
+      const dias = calcularDias(desde, hasta);
+      return dias * tarifa;
     };
-
-    const formatCurrency = (value) => {
-      const n = Number(value) || 0;
-      try {
-        return 'Gs ' + n.toLocaleString('es-PY');
-      } catch (e) {
-        return 'Gs ' + n.toString();
-      }
-    };
-
-    // ===== Persistence (Firestore) =====
-    const getSerializableState = () => ({
-      activeTab: state.activeTab,
-      today: formatDateISO(state.today),
-      calendarMonthOffset: state.calendarMonthOffset,
-      selectedDate: state.selectedDate ? formatDateISO(state.selectedDate) : null,
-      pagosFilter: state.pagosFilter,
-      tareasFilter: state.tareasFilter,
-      selectedPerroId: state.selectedPerroId,
-      tarifa: state.tarifa,
-      perros: state.perros,
-      hospedajes: state.hospedajes,
-      pagos: state.pagos,
-      tareas: state.tareas
-    });
-
-    async function saveState() {
-      const data = getSerializableState();
-      try {
-        await db.collection('nuba').doc('app-state').set(data);
-      } catch (e) {
-        console.error('saveState to Firebase failed', e);
-      }
-    }
-
-    async function loadState() {
-      try {
-        const unsubscriber = db.collection('nuba').doc('app-state').onSnapshot((snapshot) => {
-          if (snapshot.exists) {
-            const obj = snapshot.data();
-            if (obj) {
-              state.activeTab = obj.activeTab || state.activeTab;
-              state.today = obj.today ? new Date(obj.today) : state.today;
-              state.calendarMonthOffset = obj.calendarMonthOffset || state.calendarMonthOffset;
-              state.selectedDate = obj.selectedDate ? new Date(obj.selectedDate) : state.selectedDate;
-              state.pagosFilter = obj.pagosFilter || state.pagosFilter;
-              state.tareasFilter = obj.tareasFilter || state.tareasFilter;
-              state.selectedPerroId = obj.selectedPerroId || state.selectedPerroId;
-              if (obj.tarifa) state.tarifa = obj.tarifa;
-              if (Array.isArray(obj.perros)) state.perros = obj.perros;
-              if (Array.isArray(obj.hospedajes)) state.hospedajes = obj.hospedajes;
-              if (Array.isArray(obj.pagos)) state.pagos = obj.pagos;
-              if (Array.isArray(obj.tareas)) state.tareas = obj.tareas;
-              renderApp(document.getElementById("app"));
-            }
-          }
-        });
-        unsubscribe = unsubscriber;
-      } catch (e) {
-        console.error('loadState from Firebase failed', e);
-      }
-    }
 
     // ===== Views =====
     function renderCalendarioView() {
@@ -493,7 +403,7 @@
             "div",
             { class: "stay-meta" },
             `Hab. ${h.habitacion} · ${h.desde.split("-").reverse().join("/")}` +
-                ` – ${h.hasta.split("-").reverse().join("/")} · ${formatCurrency(montoCalculado)}`
+              ` – ${h.hasta.split("-").reverse().join("/")} · $${montoCalculado}`
           )
         ]),
         el("div", { style: "display:flex; gap:6px; align-items:center;" }, [
@@ -508,21 +418,6 @@
               }
             },
             "Editar"
-          ),
-          el(
-            "button",
-            {
-              class: "btn-ghost",
-              style: "color: red;",
-              onclick: () => {
-                if (confirm(`¿Eliminar hospedaje de ${perro ? perro.nombre : "Perro"}?`)) {
-                  state.hospedajes = state.hospedajes.filter((x) => x.id !== h.id);
-                  saveState();
-                  renderApp(document.getElementById("app"));
-                }
-              }
-            },
-            "Eliminar"
           )
         ])
       ]);
@@ -569,13 +464,12 @@
       const pendientes = state.pagos.filter(
         (pay) => pay.perroId === p.id && pay.estado === "pendiente"
       ).length;
-      const tam = p.tamano ? ` · ${p.tamano}` : "";
 
       return el("div", { class: "pet-item" }, [
-        el("div", { class: "pet-avatar" }, p.foto ? el("img", { src: p.foto, style: "width:40px;height:40px;border-radius:50%;object-fit:cover;" }) : initials),
+        el("div", { class: "pet-avatar" }, initials),
         el("div", { class: "pet-main" }, [
           el("div", { class: "pet-name" }, p.nombre),
-          el("div", { class: "pet-notes" }, p.cliente ? `Cliente: ${p.cliente}${tam}` : tam),
+          el("div", { class: "pet-notes" }, p.cliente ? `Cliente: ${p.cliente}` : ""),
           el("div", { class: "pet-tags" }, [
             p.etiquetas.map((tag) => el("span", { class: "pet-tag" }, tag)),
             activos
@@ -602,21 +496,6 @@
               }
             },
             "Ver Perfil"
-          ),
-          el(
-            "button",
-            {
-              class: "btn-ghost",
-              style: "color: red;",
-              onclick: () => {
-                if (confirm(`¿Eliminar a ${p.nombre}?`)) {
-                  state.perros = state.perros.filter((x) => x.id !== p.id);
-                  saveState();
-                  renderApp(document.getElementById("app"));
-                }
-              }
-            },
-            "Eliminar"
           )
         ])
       ]);
@@ -731,71 +610,33 @@
               p.notas ? el("div", { class: "payment-notes" }, p.notas) : null
             ]),
             el("div", { style: "text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end;" }, [
-              (function(){
-                const montoEntregado = typeof p.montoEntregado === 'number' ? p.montoEntregado : (p.montoEntregado ? Number(p.montoEntregado) : 0);
-                const montoRestante = p.monto - montoEntregado;
-                return el("div", null, [
-                  el("div", { class: "payment-amount" }, [
-                    formatCurrency(p.monto),
-                    montoEntregado > 0 ? el("span", { style: "color:green; font-size:13px; margin-left:8px;" }, `- ${formatCurrency(montoEntregado)} entregado`) : null,
-                    el("div", { style: "font-size:13px; color:#555;" }, `Restante: ${formatCurrency(montoRestante)}`)
-                  ]),
-                  el("input", {
-                    type: "number",
-                    min: 0,
-                    max: p.monto,
-                    value: montoEntregado,
-                    style: "width:90px; margin-top:4px;",
-                    onchange: (e) => {
-                      p.montoEntregado = Number(e.target.value) || 0;
-                      saveState();
-                      renderApp(document.getElementById("app"));
-                    }
-                  }),
-                  el("div", null, [
-                    filter === "pendientes"
-                      ? el(
-                          "button",
-                          {
-                            class: "btn-primary btn-small",
-                            onclick: () => {
-                              p.estado = "pagado";
-                              saveState();
-                              renderApp(document.getElementById("app"));
-                            }
-                          },
-                          "Marcar pagado"
-                        )
-                      : null,
-                    el(
+              el("div", { class: "payment-amount" }, `$${p.monto.toFixed(0)}`),
+              el("div", null, [
+                filter === "pendientes"
+                  ? el(
                       "button",
                       {
-                        class: "btn-ghost",
+                        class: "btn-primary btn-small",
                         onclick: () => {
-                          state.modal = { type: "pago", pagoId: p.id };
+                          p.estado = "pagado";
                           renderApp(document.getElementById("app"));
                         }
                       },
-                      "Editar"
-                    ),
-                    el(
-                      "button",
-                      {
-                        class: "btn-ghost",
-                        style: "color: red;",
-                        onclick: () => {
-                          if (confirm(`¿Eliminar pago de ${formatCurrency(p.monto)}?`)) {
-                            state.pagos = state.pagos.filter((x) => x.id !== p.id);
-                            saveState();
-                            renderApp(document.getElementById("app"));
-                          }
-                        }
-                      },
-                      "Eliminar"
+                      "Marcar pagado"
                     )
-                  ])
-                ]);
-              })()
+                  : null,
+                el(
+                  "button",
+                  {
+                    class: "btn-ghost",
+                    onclick: () => {
+                      state.modal = { type: "pago", pagoId: p.id };
+                      renderApp(document.getElementById("app"));
+                    }
+                  },
+                  "Editar"
+                )
+              ])
             ])
           ]);
         })
@@ -901,13 +742,12 @@
               {
                 class: "task-checkbox",
                 onclick: () => {
-                    if (t.estado === "hecha") {
-                      t.estado = "pendiente";
-                    } else {
-                      t.estado = "hecha";
-                    }
-                    saveState();
-                    renderApp(document.getElementById("app"));
+                  if (t.estado === "hecha") {
+                    t.estado = "pendiente";
+                  } else {
+                    t.estado = "hecha";
+                  }
+                  renderApp(document.getElementById("app"));
                 }
               },
               t.estado === "hecha" ? "✓" : ""
@@ -922,22 +762,7 @@
                 ]),
                 el("span", { class: `task-status-pill ${statusClass}` }, statusLabel)
               ])
-            ]),
-            el(
-              "button",
-              {
-                class: "btn-ghost",
-                style: "color: red; margin-left: 8px;",
-                onclick: () => {
-                  if (confirm(`¿Eliminar tarea "${t.titulo}"?`)) {
-                    state.tareas = state.tareas.filter((x) => x.id !== t.id);
-                    saveState();
-                    renderApp(document.getElementById("app"));
-                  }
-                }
-              },
-              "✕"
-            )
+            ])
           ]);
         })
       );
@@ -1023,7 +848,6 @@
           if (pago) {
             pago.monto = calcularMonto(desde, hasta);
           }
-          saveState();
         } else {
           state.hospedajes.push({
             id: Date.now(),
@@ -1036,7 +860,6 @@
           // Crear pago automático
           const nuevoHospedajeId = Date.now();
           const monto = calcularMonto(desde, hasta);
-          const noches = calcularNoches(desde, hasta);
           state.pagos.push({
             id: Date.now() + 1,
             perroId,
@@ -1044,10 +867,9 @@
             vence: hasta,
             hospedajeId: nuevoHospedajeId,
             estado: "pendiente",
-            notas: `Pago por hospedaje ${noches} noches`
+            notas: `Pago por hospedaje ${calcularDias(desde, hasta)} noches`
           });
           state.hospedajes[state.hospedajes.length - 1].id = nuevoHospedajeId;
-          saveState();
         }
         close();
       };
@@ -1159,7 +981,6 @@
             estado: estado || "pendiente"
           });
         }
-        saveState();
         close();
       };
 
@@ -1184,7 +1005,7 @@
             perroSelect
           ]),
           el("div", { class: "modal-field" }, [
-            el("label", null, "Monto (Gs)"),
+            el("label", null, "Monto ($)"),
             montoInput
           ]),
           el("div", { class: "modal-field" }, [
@@ -1220,55 +1041,6 @@
       const emailInput = el("input", { type: "email", placeholder: "Email", value: existing ? (existing.cliente_email || "") : "" });
       const notasInput = el("input", { type: "text", placeholder: "Notas", value: existing ? existing.notas : "" });
       const etiquetasInput = el("input", { type: "text", placeholder: "Etiquetas (separadas por comas)", value: existing ? (existing.etiquetas || []).join(", ") : "" });
-      const tamanoSelect = el("select", null, [
-        el("option", { value: "Pequeño" }, "Pequeño"),
-        el("option", { value: "Mediano" }, "Mediano"),
-        el("option", { value: "Grande" }, "Grande")
-      ]);
-
-      // Manejo de adjuntos (imágenes) en la ficha médica
-      const tempAdjuntos = existing && existing.adjuntos ? existing.adjuntos.slice() : [];
-      // Foto principal (se muestra junto al nombre)
-      let tempPhoto = existing && existing.foto ? existing.foto : null;
-      const photoPreview = el("div", { style: "margin-bottom:8px;" }, tempPhoto ? el("img", { src: tempPhoto, style: "width:80px;height:80px;object-fit:cover;border-radius:8px;" }) : null);
-      const photoInput = el("input", { type: "file", accept: "image/*", onchange: (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          tempPhoto = reader.result;
-          photoPreview.innerHTML = '';
-          photoPreview.appendChild(el('img', { src: reader.result, style: 'width:80px;height:80px;object-fit:cover;border-radius:8px;' }));
-        };
-        reader.readAsDataURL(file);
-      } });
-      const adjContainer = el("div", { class: "adj-container" }, tempAdjuntos.map(a => {
-        return el("div", { class: "adj-row" }, [
-          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
-          el("div", { style: "flex:1;margin-left:8px;" }, a.nombre),
-          el("button", { class: "btn-ghost", onclick: () => { const idx = tempAdjuntos.findIndex(x=>x.id===a.id); if(idx>=0){ tempAdjuntos.splice(idx,1); adjContainer.innerHTML = ''; tempAdjuntos.forEach(x=> adjContainer.appendChild(renderAdjItem(x))); } } }, "Eliminar")
-        ]);
-      }));
-
-      function renderAdjItem(a) {
-        return el("div", { class: "adj-row" }, [
-          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
-          el("div", { style: "flex:1;margin-left:8px;" }, a.nombre),
-          el("button", { class: "btn-ghost", onclick: () => { const idx = tempAdjuntos.findIndex(x=>x.id===a.id); if(idx>=0){ tempAdjuntos.splice(idx,1); adjContainer.innerHTML = ''; tempAdjuntos.forEach(x=> adjContainer.appendChild(renderAdjItem(x))); } } }, "Eliminar")
-        ]);
-      }
-
-      const fileInput = el("input", { type: "file", accept: "image/*", onchange: (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const obj = { id: Date.now(), nombre: file.name, tipo: file.type, data: reader.result };
-          tempAdjuntos.push(obj);
-          adjContainer.appendChild(renderAdjItem(obj));
-        };
-        reader.readAsDataURL(file);
-      } });
 
       const save = () => {
         const nombre = nombreInput.value.trim();
@@ -1277,7 +1049,6 @@
         const cliente_email = emailInput.value.trim();
         const notas = notasInput.value.trim();
         const etiquetas = etiquetasInput.value.split(",").map(s=>s.trim()).filter(Boolean);
-        const tamano = tamanoSelect.value || (existing && existing.tamano) || "Mediano";
 
         if (!nombre) { alert("Ingresa el nombre del perro."); return; }
 
@@ -1288,9 +1059,6 @@
           existing.cliente_email = cliente_email;
           existing.notas = notas;
           existing.etiquetas = etiquetas;
-          existing.tamano = tamano;
-          existing.adjuntos = tempAdjuntos;
-          existing.foto = tempPhoto || existing.foto || null;
         } else {
           state.perros.push({
             id: Date.now(),
@@ -1300,19 +1068,13 @@
             cliente_email,
             notas,
             etiquetas,
-            tamano,
-            adjuntos: tempAdjuntos,
-            foto: tempPhoto || null
+            adjuntos: []
           });
         }
-        saveState();
         close();
       };
 
       sheet.appendChild(el("div", { class: "modal-header" }, [ el("div", { class: "modal-title" }, existing ? "Editar perro" : "Nuevo perro"), el("button", { class: "btn-icon", onclick: close }, "✕") ]));
-      // Prefill tamaño if editing
-      if (existing && existing.tamano) tamanoSelect.value = existing.tamano;
-
       sheet.appendChild(el("div", { class: "modal-body" }, [
         el("div", { class: "modal-field" }, [ el("label", null, "Nombre"), nombreInput ]),
         el("div", { class: "modal-field" }, [ el("label", null, "Cliente"), clienteInput ]),
@@ -1320,8 +1082,6 @@
         el("div", { class: "modal-field" }, [ el("label", null, "Email"), emailInput ]),
         el("div", { class: "modal-field" }, [ el("label", null, "Notas"), notasInput ]),
         el("div", { class: "modal-field" }, [ el("label", null, "Etiquetas"), etiquetasInput ]),
-        el("div", { class: "modal-field" }, [ el("label", null, "Foto (aparecerá junto al nombre)"), photoPreview, photoInput ]),
-        el("div", { class: "modal-field" }, [ el("label", null, "Ficha médica (adjuntar imágenes)"), fileInput, adjContainer ]),
         el("div", { class: "modal-actions" }, [ el("button", { class: "btn-ghost", onclick: close }, "Cancelar"), el("button", { class: "btn-primary", onclick: save }, "Guardar") ])
       ]));
 
@@ -1332,9 +1092,9 @@
       const sheet = el("div", { class: "modal-sheet" });
       const precioInput = el("input", {
         type: "number",
-        placeholder: "Precio por noche (Gs)",
+        placeholder: "Precio por noche ($)",
         min: "0",
-        step: "1",
+        step: "0.01",
         value: state.tarifa.precioNoche
       });
       const temporadaInput = el("input", {
@@ -1354,14 +1114,13 @@
         }
         state.tarifa.precioNoche = precio;
         state.tarifa.precioTemporada = parseFloat(temporadaInput.value) || 0;
-        saveState();
         alert("Tarifas actualizadas correctamente.");
         close();
       };
 
       sheet.appendChild(el("div", { class: "modal-header" }, [ el("div", { class: "modal-title" }, "Configurar Tarifas"), el("button", { class: "btn-icon", onclick: close }, "✕") ]));
       sheet.appendChild(el("div", { class: "modal-body" }, [
-        el("div", { class: "modal-field" }, [ el("label", null, "Precio por noche (Gs)"), precioInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Precio por noche ($)"), precioInput ]),
         el("div", { class: "modal-field" }, [ el("label", null, "Ajuste temporada (%)"), temporadaInput ]),
         el("div", { class: "modal-actions" }, [ el("button", { class: "btn-ghost", onclick: close }, "Cancelar"), el("button", { class: "btn-primary", onclick: save }, "Guardar") ])
       ]));
@@ -1391,7 +1150,6 @@
           el("p", null, `Cliente: ${perro.cliente}`),
           el("p", null, `Teléfono: ${perro.cliente_telefono || "-"}`),
           el("p", null, `Email: ${perro.cliente_email || "-"}`),
-          el("p", null, `Tamaño: ${perro.tamano || "-"}`),
           el("p", null, `Notas: ${perro.notas}`)
         ]),
         el("div", { class: "modal-section" }, [
@@ -1410,19 +1168,19 @@
             ? el("p", null, "No hay pagos registrados.")
             : pagosDelPerro.map((p) =>
               el("div", { style: "margin:6px 0; font-size:11px; padding:6px; background:#f0f0f0; border-radius:6px;" }, [
-                `${formatCurrency(p.monto)} · Vence: ${p.vence} · ${p.estado}`
+                `$${p.monto} · Vence: ${p.vence} · ${p.estado}`
               ])
             )
         ]),
         el("div", { class: "modal-section" }, [
           el("h4", null, "Documentos Adjuntos"),
           perro.adjuntos && perro.adjuntos.length > 0
-            ? el("div", { style: "display:flex;flex-wrap:wrap;gap:8px;" }, perro.adjuntos.map((adj) =>
-              el("div", { style: "width:120px; padding:6px; background:#f8f9fa; border-radius:8px; text-align:center;" }, [
-                adj.data ? el("img", { src: adj.data, style: "width:100%; height:80px; object-fit:cover; border-radius:6px;", onclick: () => { const w = window.open(); w.document.write('<img src="'+adj.data+'" style="max-width:100%;">'); } }) : el("div", { style: "height:80px; display:flex; align-items:center; justify-content:center;" }, "📄"),
-                el("div", { style: "font-size:12px; margin-top:6px;" }, adj.nombre)
+            ? perro.adjuntos.map((adj) =>
+              el("div", { style: "margin:6px 0; font-size:11px; padding:6px; background:#f0f0f0; border-radius:6px; display:flex; justify-content:space-between;" }, [
+                `📄 ${adj.nombre}`,
+                el("small", null, adj.tipo)
               ])
-            ))
+            )
             : el("p", null, "No hay documentos adjuntos.")
         ]),
         el("div", { class: "modal-actions" }, [
@@ -1465,8 +1223,7 @@
           asignadoA,
           estado: "pendiente"
         });
-          saveState();
-          close();
+        close();
       };
 
       sheet.appendChild(
@@ -1529,58 +1286,23 @@
         return todayISO >= h.desde && todayISO <= h.hasta;
       }).length;
 
-      // Botón de recarga compacto (solo icono, tooltip)
-      const reloadBtn = el("button", {
-        class: "btn-ghost reload-btn",
-        title: "Recargar datos del servidor",
-        style: "margin-left:8px;padding:4px 8px;display:flex;align-items:center;justify-content:center;",
-        onclick: async (e) => {
-          e.preventDefault();
-          await loadState();
-          state.selectedDate = state.selectedDate ? new Date(state.selectedDate) : new Date(state.today);
-          renderApp(document.getElementById("app"));
-        }
-      }, [
-        el("span", { style: "font-size:18px;line-height:1;" }, "⟳")
-      ]);
-
       return el("header", { class: "app-header" }, [
         el("div", { class: "logo-group" }, [
-          (function(){
-            const ns = "http://www.w3.org/2000/svg";
-            const svg = document.createElementNS(ns, "svg");
-            svg.setAttribute("viewBox", "0 0 200 80");
-            svg.setAttribute("class", "logo-image");
-            svg.innerHTML = `
-              <defs>
-                <linearGradient id="g1" x1="0" x2="1">
-                  <stop offset="0" stop-color="#7bb6ff"/>
-                  <stop offset="1" stop-color="#a8d8ea"/>
-                </linearGradient>
-              </defs>
-              <g fill="none" fill-rule="evenodd">
-                <rect width="200" height="80" rx="8" fill="white"/>
-                <g transform="translate(12,8)">
-                  <circle cx="28" cy="28" r="24" fill="url(#g1)" />
-                  <path d="M16 34c6-8 20-6 24-2 6 6 2 12-6 14-8 2-20-8-18-12z" fill="#0f2b5a" opacity="0.95" />
-                  <path d="M34 18c4-2 8-1 12 2 2 2 1 6-3 6-4 0-9-6-9-8z" fill="#ffffff" opacity="0.9" />
-                </g>
-                <text x="88" y="46" font-family="Segoe UI, Roboto, sans-serif" font-size="28" fill="#2c3e50" font-weight="700">NUBA</text>
-              </g>
-            `;
-            return svg;
-          })(),
+          el("div", { class: "logo-icon" }, [
+            el("div", { class: "paw" }, [
+              el("div", { class: "paw-toe" }),
+              el("div", { class: "paw-toe" }),
+              el("div", { class: "paw-toe" })
+            ])
+          ]),
           el("div", { class: "logo-text-block" }, [
             el("span", { class: "logo-text-main" }, "NUBA"),
             el("span", { class: "logo-text-sub" }, "Guardería Canina")
           ])
         ]),
-        el("div", { style: "display:flex;align-items:center;gap:8px;" }, [
-          el("div", { class: "badge-pill" }, [
-            el("span", { class: "badge-dot" }),
-            `${todayCount} hospedajes hoy`
-          ]),
-          reloadBtn
+        el("div", { class: "badge-pill" }, [
+          el("span", { class: "badge-dot" }),
+          `${todayCount} hospedajes hoy`
         ])
       ]);
     }
@@ -1648,9 +1370,8 @@
     }
 
     // Initial setup
-    window.addEventListener("DOMContentLoaded", async () => {
-      await loadState();
-      state.selectedDate = state.selectedDate ? new Date(state.selectedDate) : new Date(state.today);
+    window.addEventListener("DOMContentLoaded", () => {
+      state.selectedDate = new Date(state.today);
       renderApp(document.getElementById("app"));
     });
   </script>
