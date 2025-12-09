@@ -1,4 +1,4 @@
-import { state, formatDateISO } from "./state.js";
+import { state, formatDateISO, saveState } from "./state.js";
 import { el } from "./dom.js";
 
 export function renderModal() {
@@ -67,6 +67,13 @@ function renderHospedajeModal(close) {
       habitacion,
       estado: "programado"
     });
+    // Crear pago automático similar a la versión monolítica
+    const nuevoHospedajeId = Date.now();
+    const noches = Math.max(1, Math.floor((new Date(hasta) - new Date(desde)) / (1000*60*60*24)));
+    const monto = noches * (state.tarifa ? state.tarifa.precioNoche : 60000);
+    state.pagos.push({ id: Date.now() + 1, perroId, monto, vence: hasta, hospedajeId: nuevoHospedajeId, estado: "pendiente", notas: `Pago por hospedaje ${noches} noches`, montoEntregado: 0 });
+    state.hospedajes[state.hospedajes.length - 1].id = nuevoHospedajeId;
+    saveState();
     close();
   };
 
@@ -144,6 +151,7 @@ function renderTareaModal(close) {
       asignadoA,
       estado: "pendiente"
     });
+    saveState();
     close();
   };
 

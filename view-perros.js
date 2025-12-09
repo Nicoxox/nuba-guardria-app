@@ -1,4 +1,4 @@
-import { state } from "./state.js";
+import { state, saveState } from "./state.js";
 import { el } from "./dom.js";
 
 export function renderPerrosView() {
@@ -45,10 +45,10 @@ function renderPetItem(p) {
   ).length;
 
   return el("div", { class: "pet-item" }, [
-    el("div", { class: "pet-avatar" }, initials),
+    el("div", { class: "pet-avatar" }, p.foto ? el("img", { src: p.foto, style: "width:40px;height:40px;border-radius:50%;object-fit:cover;" }) : initials),
     el("div", { class: "pet-main" }, [
       el("div", { class: "pet-name" }, p.nombre),
-      el("div", { class: "pet-notes" }, p.notas),
+      el("div", { class: "pet-notes" }, p.cliente ? `Cliente: ${p.cliente}` : p.notas),
       el("div", { class: "pet-tags" }, [
         p.etiquetas.map((tag) => el("span", { class: "pet-tag" }, tag)),
         activos
@@ -62,6 +62,33 @@ function renderPetItem(p) {
             )
           : null
       ])
+    ]),
+    el("div", null, [
+      el(
+        "button",
+        {
+          class: "btn-ghost",
+          onclick: () => {
+            alert('Ver perfil (pendiente modal en versión modular)');
+          }
+        },
+        "Ver Perfil"
+      ),
+      el(
+        "button",
+        {
+          class: "btn-ghost",
+          style: "color: red;",
+          onclick: () => {
+            if (confirm(`¿Eliminar a ${p.nombre}?`)) {
+              state.perros = state.perros.filter((x) => x.id !== p.id);
+              saveState();
+              window.dispatchEvent(new Event('nuba-rerender'));
+            }
+          }
+        },
+        "Eliminar"
+      )
     ])
   ]);
 }

@@ -129,3 +129,59 @@ export const isSameDay = (a, b) =>
   a.getFullYear() === b.getFullYear() &&
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
+
+// ===== Persistence helpers (Firestore compat via global `firebase`) =====
+const getSerializableState = () => ({
+  activeTab: state.activeTab,
+  today: formatDateISO(state.today),
+  calendarMonthOffset: state.calendarMonthOffset,
+  selectedDate: state.selectedDate ? formatDateISO(state.selectedDate) : null,
+  pagosFilter: state.pagosFilter,
+  tareasFilter: state.tareasFilter,
+  selectedPerroId: state.selectedPerroId || null,
+  tarifa: state.tarifa || null,
+  perros: state.perros,
+  hospedajes: state.hospedajes,
+  pagos: state.pagos,
+  tareas: state.tareas
+});
+
+export async function saveState() {
+  if (typeof firebase === "undefined" || !firebase.firestore) return;
+  try {
+    const db = firebase.firestore();
+    await db.collection("nuba").doc("app-state").set(getSerializableState());
+  } catch (e) {
+    console.error("saveState to Firebase failed", e);
+  }
+}
+
+export async function loadState() {
+  if (typeof firebase === "undefined" || !firebase.firestore) return;
+  try {
+    const db = firebase.firestore();
+    const unsubscriber = db.collection("nuba").doc("app-state").onSnapshot((snapshot) => {
+      if (snapshot.exists) {
+        const obj = snapshot.data();
+        if (obj) {
+          state.activeTab = obj.activeTab || state.activeTab;
+          state.today = obj.today ? new Date(obj.today) : state.today;
+          state.calendarMonthOffset = obj.calendarMonthOffset || state.calendarMonthOffset;
+          state.selectedDate = obj.selectedDate ? new Date(obj.selectedDate) : state.selectedDate;
+          state.pagosFilter = obj.pagosFilter || state.pagosFilter;
+          state.tareasFilter = obj.tareasFilter || state.tareasFilter;
+          state.selectedPerroId = obj.selectedPerroId || state.selectedPerroId;
+          if (obj.tarifa) state.tarifa = obj.tarifa;
+          if (Array.isArray(obj.perros)) state.perros = obj.perros;
+          if (Array.isArray(obj.hospedajes)) state.hospedajes = obj.hospedajes;
+          if (Array.isArray(obj.pagos)) state.pagos = obj.pagos;
+          if (Array.isArray(obj.tareas)) state.tareas = obj.tareas;
+          window.dispatchEvent(new Event("nuba-rerender"));
+        }
+      }
+    });
+    return unsubscriber;
+  } catch (e) {
+    console.error("loadState from Firebase failed", e);
+  }
+}

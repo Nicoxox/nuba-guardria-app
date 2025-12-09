@@ -1,4 +1,5 @@
 import { state, formatDateISO } from "./state.js";
+import { state, formatDateISO, saveState } from "./state.js";
 import { el } from "./dom.js";
 
 export function renderPagosView() {
@@ -86,22 +87,72 @@ function renderPagosList(filter) {
             ])
           ])
         ]),
-        el("div", { style: "text-align:right;" }, [
-          el("div", { class: "payment-amount" }, `$${p.monto.toFixed(0)}`),
-          filter === "pendientes"
-            ? el(
-                "button",
-                {
-                  class: "btn-primary btn-small",
-                  onclick: () => {
-                    p.estado = "pagado";
-                    window.dispatchEvent(new Event("nuba-rerender"));
+          el("div", { style: "text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end;" }, [
+            (function(){
+              const montoEntregado = typeof p.montoEntregado === 'number' ? p.montoEntregado : (p.montoEntregado ? Number(p.montoEntregado) : 0);
+              const montoRestante = p.monto - montoEntregado;
+              return el("div", null, [
+                el("div", { class: "payment-amount" }, [
+                  `Gs ${Number(p.monto).toLocaleString('es-PY')}`,
+                  montoEntregado > 0 ? el("span", { style: "color:green; font-size:13px; margin-left:8px;" }, `- Gs ${Number(montoEntregado).toLocaleString('es-PY')} entregado`) : null,
+                  el("div", { style: "font-size:13px; color:#555;" }, `Restante: Gs ${Number(montoRestante).toLocaleString('es-PY')}`)
+                ]),
+                el("input", {
+                  type: "number",
+                  min: 0,
+                  max: p.monto,
+                  value: montoEntregado,
+                  style: "width:90px; margin-top:4px;",
+                  onchange: (e) => {
+                    p.montoEntregado = Number(e.target.value) || 0;
+                    saveState();
+                    window.dispatchEvent(new Event('nuba-rerender'));
                   }
-                },
-                "Marcar pagado"
-              )
-            : null
-        ])
+                }),
+                el("div", null, [
+                  filter === "pendientes"
+                    ? el(
+                        "button",
+                        {
+                          class: "btn-primary btn-small",
+                          onclick: () => {
+                            p.estado = "pagado";
+                            saveState();
+                            window.dispatchEvent(new Event('nuba-rerender'));
+                          }
+                        },
+                        "Marcar pagado"
+                      )
+                    : null,
+                  el(
+                    "button",
+                    {
+                      class: "btn-ghost",
+                      onclick: () => {
+                        alert('Editar pago (pendiente implementar modal en versión modular)');
+                      }
+                    },
+                    "Editar"
+                  ),
+                  el(
+                    "button",
+                    {
+                      class: "btn-ghost",
+                      style: "color: red;",
+                      onclick: () => {
+                        if (confirm(`¿Eliminar pago de Gs ${Number(p.monto).toLocaleString('es-PY')}?`)) {
+                          state.pagos = state.pagos.filter((x) => x.id !== p.id);
+                          saveState();
+                          window.dispatchEvent(new Event('nuba-rerender'));
+                        }
+                      }
+                    },
+                    "Eliminar"
+                  )
+                ])
+              ]);
+            })()
+          ])
       ]);
     })
   );

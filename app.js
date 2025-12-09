@@ -1,4 +1,4 @@
-import { state } from "./state.js";
+import { state, loadState } from "./state.js";
 import { el } from "./dom.js";
 import { renderCalendarioView } from "./view-calendario.js";
 import { renderPerrosView } from "./view-perros.js";
@@ -111,8 +111,15 @@ function renderContent() {
 }
 
 // Initial setup
-window.addEventListener("DOMContentLoaded", () => {
-  state.selectedDate = new Date(state.today);
+window.addEventListener("DOMContentLoaded", async () => {
+  if (typeof loadState === 'function') {
+    try {
+      await loadState();
+    } catch (e) {
+      console.warn('loadState failed or not available', e);
+    }
+  }
+  state.selectedDate = state.selectedDate ? new Date(state.selectedDate) : new Date(state.today);
   renderApp(document.getElementById("app"));
 });
 
