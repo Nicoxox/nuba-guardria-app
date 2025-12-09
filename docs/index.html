@@ -492,8 +492,8 @@
           el(
             "div",
             { class: "stay-meta" },
-            `Hab. ${h.habitacion} · ${h.desde.split("-").reverse().join("/")}` +
-                ` – ${h.hasta.split("-").reverse().join("/")} · ${formatCurrency(montoCalculado)}`
+            [`Hab. ${h.habitacion} · ${h.desde.split("-").reverse().join("/")}` +
+                ` – ${h.hasta.split("-").reverse().join("/")} · ${formatCurrency(montoCalculado)}`]
           )
         ]),
         el("div", { style: "display:flex; gap:6px; align-items:center;" }, [
