@@ -1,0 +1,400 @@
+/* ===== CSS Variables y Theme ===== */
+:root {
+  --color-primary: #7bb6ff;
+  --color-primary-dark: #5a95e8;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f9fa;
+  --color-secondary: #a8d8ea;
+  --color-accent: #ff8b54;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --color-text: #2c3e50;
+  --color-text-muted: #7f8c8d;
+  --color-border: #e1e8ed;
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --size-radius: 8px;
+  --size-spacing-xs: 4px;
+  --size-spacing-sm: 8px;
+  --size-spacing-md: 12px;
+  --size-spacing-lg: 16px;
+  --size-spacing-xl: 24px;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-size-small: 11px;
+  --font-size-normal: 13px;
+  --font-size-title: 15px;
+  --font-size-h3: 18px;
+  --font-size-h2: 22px;
+}
+
+/* ===== Reset and Base ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  line-height: 1.5;
+  font-size: var(--font-size-normal);
+  overflow: hidden;
+}
+
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  font-size: var(--font-size-normal);
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+
+input,
+select {
+  font-family: var(--font-family);
+  font-size: var(--font-size-normal);
+  padding: var(--size-spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--size-radius);
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(123, 182, 255, 0.1);
+}
+
+/* ===== Layout ===== */
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+}
+
+.app-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--size-spacing-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: var(--size-spacing-md);
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.logo-image {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.paw {
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+
+.adj-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.adj-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.paw-toe {
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.paw-toe:nth-child(1) {
+  top: 0;
+  left: 6px;
+}
+
+.paw-toe:nth-child(2) {
+  top: 2px;
+  left: 0;
+}
+
+.paw-toe:nth-child(3) {
+  top: 2px;
+  right: 0;
+}
+
+.logo-text-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-text-main {
+  font-size: var(--font-size-h3);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.logo-text-sub {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.badge-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--size-spacing-xs);
+  background: var(--color-surface-alt);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-success);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ===== Tabs ===== */
+.app-tabs {
+  display: flex;
+  gap: var(--size-spacing-sm);
+  padding: var(--size-spacing-md) var(--size-spacing-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tab-pill {
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-normal);
+  white-space: nowrap;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-pill:hover {
+  background: var(--color-border);
+}
+
+.tab-pill.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.tab-badge {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ===== Content Area ===== */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--size-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-spacing-lg);
+}
+
+/* ===== Cards ===== */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--size-radius);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-tight {
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  padding: var(--size-spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--size-spacing-md);
+}
+
+.card-title {
+  font-size: var(--font-size-h3);
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-spacing-xs);
+}
+
+.card-subtitle {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  padding: 4px 8px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.chip-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+/* ===== Calendar ===== */
+.calendar-card {
+  margin: 0;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--size-spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-month {
+  font-size: var(--font-size-h2);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.calendar-nav {
+  display: flex;
+  gap: var(--size-spacing-sm);
+}
+
+.calendar-nav button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.calendar-nav button:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding: var(--size-spacing-md);
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-weekday {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.calendar-day {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--size-radius);
+  padding: var(--size-spacing-sm);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-small);
+  position: relative;
+  transition: all 0.2s;
+}
+
+.calendar-day:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-primary);
+}
