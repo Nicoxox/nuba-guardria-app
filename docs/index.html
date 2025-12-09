@@ -572,7 +572,7 @@
       const tam = p.tamano ? ` · ${p.tamano}` : "";
 
       return el("div", { class: "pet-item" }, [
-        el("div", { class: "pet-avatar" }, p.foto ? el("img", { src: p.foto, style: "width:40px;height:40px;border-radius:50%;object-fit:cover;" }) : initials),
+        el("div", { class: "pet-avatar" }, p.foto ? el("img", { src: p.foto, style: "width:40px;height:40px;border-radius:50%;object-fit:cover;" }, []) : initials),
         el("div", { class: "pet-main" }, [
           el("div", { class: "pet-name" }, p.nombre),
           el("div", { class: "pet-notes" }, p.cliente ? `Cliente: ${p.cliente}${tam}` : tam),
