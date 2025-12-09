@@ -1230,7 +1230,7 @@
       const tempAdjuntos = existing && existing.adjuntos ? existing.adjuntos.slice() : [];
       // Foto principal (se muestra junto al nombre)
       let tempPhoto = existing && existing.foto ? existing.foto : null;
-      const photoPreview = el("div", { style: "margin-bottom:8px;" }, tempPhoto ? el("img", { src: tempPhoto, style: "width:80px;height:80px;object-fit:cover;border-radius:8px;" }) : null);
+      const photoPreview = el("div", { style: "margin-bottom:8px;" }, tempPhoto ? el("img", { src: tempPhoto, style: "width:80px;height:80px;object-fit:cover;border-radius:8px;" }, []) : null);
       const photoInput = el("input", { type: "file", accept: "image/*", onchange: (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -1244,7 +1244,7 @@
       } });
       const adjContainer = el("div", { class: "adj-container" }, tempAdjuntos.map(a => {
         return el("div", { class: "adj-row" }, [
-          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
+          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }, []) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
           el("div", { style: "flex:1;margin-left:8px;" }, a.nombre),
           el("button", { class: "btn-ghost", onclick: () => { const idx = tempAdjuntos.findIndex(x=>x.id===a.id); if(idx>=0){ tempAdjuntos.splice(idx,1); adjContainer.innerHTML = ''; tempAdjuntos.forEach(x=> adjContainer.appendChild(renderAdjItem(x))); } } }, "Eliminar")
         ]);
@@ -1252,7 +1252,7 @@
 
       function renderAdjItem(a) {
         return el("div", { class: "adj-row" }, [
-          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
+          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }, []) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
           el("div", { style: "flex:1;margin-left:8px;" }, a.nombre),
           el("button", { class: "btn-ghost", onclick: () => { const idx = tempAdjuntos.findIndex(x=>x.id===a.id); if(idx>=0){ tempAdjuntos.splice(idx,1); adjContainer.innerHTML = ''; tempAdjuntos.forEach(x=> adjContainer.appendChild(renderAdjItem(x))); } } }, "Eliminar")
         ]);
@@ -1419,7 +1419,7 @@
           perro.adjuntos && perro.adjuntos.length > 0
             ? el("div", { style: "display:flex;flex-wrap:wrap;gap:8px;" }, perro.adjuntos.map((adj) =>
               el("div", { style: "width:120px; padding:6px; background:#f8f9fa; border-radius:8px; text-align:center;" }, [
-                adj.data ? el("img", { src: adj.data, style: "width:100%; height:80px; object-fit:cover; border-radius:6px;", onclick: () => { const w = window.open(); w.document.write('<img src="'+adj.data+'" style="max-width:100%;">'); } }) : el("div", { style: "height:80px; display:flex; align-items:center; justify-content:center;" }, "📄"),
+                adj.data ? el("img", { src: adj.data, style: "width:100%; height:80px; object-fit:cover; border-radius:6px;", onclick: () => { const w = window.open(); w.document.write('<img src="'+adj.data+'" style="max-width:100%;">'); } }, []) : el("div", { style: "height:80px; display:flex; align-items:center; justify-content:center;" }, "📄"),
                 el("div", { style: "font-size:12px; margin-top:6px;" }, adj.nombre)
               ])
             ))
