@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>NUBA Guardería Canina</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app"></div>
+
+
+  <!-- Firebase App (core) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <!-- Firestore -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDFxvXRr3cOBCHRuvSIclYrTJhuHvNrFGc",
+      authDomain: "nuba-app-9fc14.firebaseapp.com",
+      projectId: "nuba-app-9fc14",
+      storageBucket: "nuba-app-9fc14.appspot.com",
+      messagingSenderId: "29493776320",
+      appId: "1:29493776320:web:244cdae5a60853693f0225"
+    };
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let unsubscribe = null;
+
+    // ===== DOM Helper =====
+    const el = (tag, attrs = {}, children = []) => {
+      const node = document.createElement(tag);
+      Object.entries(attrs || {}).forEach(([k, v]) => {
+        if (k === "class") node.className = v;
+        else if (k.startsWith("on") && typeof v === "function") {
+          node.addEventListener(k.slice(2).toLowerCase(), v);
+        } else if (k === "dataset" && v && typeof v === "object") {
+          Object.entries(v).forEach(([dk, dv]) => (node.dataset[dk] = dv));
+        } else {
+          node.setAttribute(k, v);
+        }
+      });
+      const append = (c) => {
+        if (c == null) return;
+        if (Array.isArray(c)) c.forEach(append);
+        else if (typeof c === "string" || typeof c === "number") {
+          node.appendChild(document.createTextNode(c));
+        } else {
+          node.appendChild(c);
+        }
+      };
+      append(children);
+      return node;
+    };
+
+    // ===== State =====
+    const state = {
+      activeTab: "calendario",
+      today: new Date(),
+      calendarMonthOffset: 0,
+      selectedDate: null,
+      pagosFilter: "pendientes",
+      tareasFilter: "todas",
+      modal: null,
+      selectedPerroId: null,
+      tarifa: { precioNoche: 60000, precioTemporada: 0 },
+      perros: [
+        {
+          id: 1,
+          nombre: "Luna",
+          notas: "Dieta hipoalergénica, muy sociable.",
+          cliente: "María Pérez",
+          cliente_telefono: "555-1234",
+          cliente_email: "maria@example.com",
+          etiquetas: ["Dieta", "Sociable"],
+          tamano: "Mediano",
+          adjuntos: [{ id: 1, nombre: "vacunas_Luna.pdf", tipo: "Certificado de Vacunas" }]
+        },
+        {
+          id: 2,
+          nombre: "Max",
+          notas: "Ansiedad por separación. Prefiere habitación tranquila.",
+          cliente: "Carlos Gómez",
+          cliente_telefono: "555-5678",
+          cliente_email: "carlos@example.com",
+          etiquetas: ["Ansiedad", "Habitación individual"],
+          tamano: "Grande",
+          adjuntos: []
+        },
+        {
+          id: 3,
+          nombre: "Toby",
+          notas: "Toma medicación por la mañana. Muy juguetón.",
+          cliente: "Lucía Fernández",
+          cliente_telefono: "555-9012",
+          cliente_email: "lucia@example.com",
+          etiquetas: ["Medicación", "Juguetón"],
+          tamano: "Pequeño",
+          adjuntos: [{ id: 2, nombre: "ficha_medica_Toby.pdf", tipo: "Ficha Médica" }]
+        }
+      ],
+      hospedajes: [
+        {
+          id: 1,
+          perroId: 1,
+          habitacion: "Suite 1",
+          desde: "2026-03-24",
+          hasta: "2026-03-27",
+          estado: "activo"
+        },
+        {
+          id: 2,
+          perroId: 2,
+          habitacion: "Hab. 3",
+          desde: "2026-03-28",
+          hasta: "2026-04-02",
+          estado: "programado"
+        },
+        {
+          id: 3,
+          perroId: 3,
+          habitacion: "Suite 2",
+          desde: "2026-03-10",
+          hasta: "2026-03-15",
+          estado: "completado"
+        }
+      ],
+      pagos: [
+        {
+          id: 1,
+          perroId: 1,
+          monto: 300000,
+          montoEntregado: 0,
+          vence: "2026-03-26",
+          estado: "pendiente",
+          hospedajeId: 1,
+          notas: "Pago por hospedaje 5 noches"
+        },
+        {
+          id: 2,
+          perroId: 2,
+          monto: 360000,
+          montoEntregado: 0,
+          vence: "2026-03-20",
+          estado: "pendiente",
+          hospedajeId: 2,
+          notas: "Pago por hospedaje 6 noches vencido"
+        },
+        {
+          id: 3,
+          perroId: 3,
+          monto: 180000,
+          montoEntregado: 0,
+          vence: "2026-03-15",
+          estado: "pagado",
+          hospedajeId: 3,
+          notas: "Pago por hospedaje 3 noches"
+        }
+      ],
+      tareas: [
+        {
+          id: 1,
+          titulo: "Paseo Luna",
+          fecha: "2026-03-25",
+          asignadoA: "Ana",
+          estado: "pendiente"
+        },
+        {
+          id: 2,
+          titulo: "Baño Max",
+          fecha: "2026-03-26",
+          asignadoA: "Luis",
+          estado: "pendiente"
+        },
+        {
+          id: 3,
+          titulo: "Limpieza Suite 2",
+          fecha: "2026-03-20",
+          asignadoA: "Equipo",
+          estado: "hecha"
+        }
+      ]
+    };
+
+    // ===== Utility Functions =====
+    const formatDateISO = (date) => date.toISOString().split("T")[0];
+
+    const addMonths = (date, offset) => {
+      const d = new Date(date);
+      d.setMonth(d.getMonth() + offset);
+      return d;
+    };
+
+    const getMonthDays = (year, month) => {
+      const firstDay = new Date(year, month, 1);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const startWeekday = (firstDay.getDay() + 6) % 7;
+      const days = [];
+      for (let i = 0; i < startWeekday; i++) {
+        days.push(null);
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        days.push(new Date(year, month, d));
+      }
+      return days;
+    };
+
+    const isSameDay = (a, b) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    // Calcular número de noches entre fechas (por noche)
+    const calcularNoches = (desde, hasta) => {
+      const d1 = new Date(desde);
+      const d2 = new Date(hasta);
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const diff = Math.floor((d2 - d1) / msPerDay);
+      return Math.max(1, diff);
+    };
+
+    const calcularMonto = (desde, hasta, tarifa = state.tarifa.precioNoche) => {
+      const noches = calcularNoches(desde, hasta);
+      return noches * tarifa;
+    };
+
+    const formatCurrency = (value) => {
+      const n = Number(value) || 0;
+      try {
+        return 'Gs ' + n.toLocaleString('es-PY');
+      } catch (e) {
+        return 'Gs ' + n.toString();
+      }
+    };
+
+    // ===== Persistence (Firestore) =====
+    const getSerializableState = () => ({
+      activeTab: state.activeTab,
+      today: formatDateISO(state.today),
+      calendarMonthOffset: state.calendarMonthOffset,
+      selectedDate: state.selectedDate ? formatDateISO(state.selectedDate) : null,
+      pagosFilter: state.pagosFilter,
+      tareasFilter: state.tareasFilter,
+      selectedPerroId: state.selectedPerroId,
+      tarifa: state.tarifa,
+      perros: state.perros,
+      hospedajes: state.hospedajes,
+      pagos: state.pagos,
+      tareas: state.tareas
+    });
+
+    async function saveState() {
+      const data = getSerializableState();
+      try {
+        await db.collection('nuba').doc('app-state').set(data);
+      } catch (e) {
+        console.error('saveState to Firebase failed', e);
+      }
+    }
+
+    async function loadState() {
+      try {
+        const unsubscriber = db.collection('nuba').doc('app-state').onSnapshot((snapshot) => {
+          if (snapshot.exists) {
+            const obj = snapshot.data();
+            if (obj) {
+              state.activeTab = obj.activeTab || state.activeTab;
+              state.today = new Date(); // Siempre usar fecha actual del sistema, ignorar Firebase
+              state.calendarMonthOffset = obj.calendarMonthOffset || state.calendarMonthOffset;
+              state.selectedDate = obj.selectedDate ? new Date(obj.selectedDate) : state.selectedDate;
+              state.pagosFilter = obj.pagosFilter || state.pagosFilter;
+              state.tareasFilter = obj.tareasFilter || state.tareasFilter;
+              state.selectedPerroId = obj.selectedPerroId || state.selectedPerroId;
+              if (obj.tarifa) state.tarifa = obj.tarifa;
+              if (Array.isArray(obj.perros)) state.perros = obj.perros;
+              if (Array.isArray(obj.hospedajes)) state.hospedajes = obj.hospedajes;
+              if (Array.isArray(obj.pagos)) state.pagos = obj.pagos;
+              if (Array.isArray(obj.tareas)) state.tareas = obj.tareas;
+              renderApp(document.getElementById("app"));
+            }
+          }
+        });
+        unsubscribe = unsubscriber;
+      } catch (e) {
+        console.error('loadState from Firebase failed', e);
+      }
+    }
+
+    // ===== Views =====
+    function renderCalendarioView() {
+      const container = el("div", { class: "calendar-card card" });
+
+      const monthDate = addMonths(state.today, state.calendarMonthOffset);
+      const monthLabel = monthDate.toLocaleDateString("es-ES", {
+        month: "long",
+        year: "numeric"
+      });
+
+      const header = el("div", { class: "calendar-header" }, [
+        el("div", null, [
+          el(
+            "div",
+            { class: "calendar-month" },
+            monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)
+          ),
+          el("div", { class: "card-subtitle" }, "Hospedajes por día")
+        ]),
+        el("div", { class: "calendar-nav" }, [
+          el(
+            "button",
+            {
+              onclick: () => {
+                state.calendarMonthOffset -= 1;
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "‹"
+          ),
+          el(
+            "button",
+            {
+              onclick: () => {
+                state.calendarMonthOffset = 0;
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "•"
+          ),
+          el(
+            "button",
+            {
+              onclick: () => {
+                state.calendarMonthOffset += 1;
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "›"
+          )
+        ])
+      ]);
+
+      const weekdaysRow = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((d) =>
+        el("div", { class: "calendar-weekday" }, d)
+      );
+
+      const days = getMonthDays(monthDate.getFullYear(), monthDate.getMonth());
+      const selectedDate = state.selectedDate || state.today;
+
+      const daysNodes = days.map((d) => {
+        if (!d) return el("div");
+        const dayISO = formatDateISO(d);
+        const staysOnDay = state.hospedajes.filter(
+          (h) => dayISO >= h.desde && dayISO <= h.hasta
+        );
+        const hasStays = staysOnDay.length > 0;
+        const isToday = isSameDay(d, state.today);
+        const isSelected = isSameDay(d, selectedDate);
+
+        const classes = ["calendar-day"];
+        if (isToday) classes.push("is-today");
+        if (hasStays) classes.push("has-stays");
+        if (isSelected) classes.push("selected");
+
+        return el(
+          "button",
+          {
+            class: classes.join(" "),
+            title: hasStays ? staysOnDay.map((h) => {
+              const perro = state.perros.find((p) => p.id === h.perroId);
+              return perro ? perro.nombre : "Perro";
+            }).join(", ") : "",
+            onclick: () => {
+              state.selectedDate = d;
+              renderApp(document.getElementById("app"));
+            }
+          },
+          [
+            el("div", { class: "calendar-day-inner" }, [
+              el("span", { class: "calendar-day-number" }, d.getDate())
+            ]),
+            hasStays
+              ? el(
+                  "div",
+                  { class: "calendar-day-badge" },
+                  staysOnDay.length > 9 ? "9+" : staysOnDay.length
+                )
+              : null,
+            hasStays
+              ? el(
+                  "div",
+                  { class: "calendar-day-pets" },
+                  staysOnDay.map((h) => {
+                    const perro = state.perros.find((p) => p.id === h.perroId);
+                    return el(
+                      "span",
+                      { class: "pet-name-tag", title: perro ? perro.nombre : "Perro" },
+                      perro ? perro.nombre : "?"
+                    );
+                  })
+                )
+              : null
+          ]
+        );
+      });
+
+      const grid = el("div", { class: "calendar-grid" }, [
+        ...weekdaysRow,
+        ...daysNodes
+      ]);
+
+      container.appendChild(header);
+      container.appendChild(grid);
+
+      const selectedISO = formatDateISO(state.selectedDate || state.today);
+      const dayStays = state.hospedajes.filter(
+        (h) => selectedISO >= h.desde && selectedISO <= h.hasta
+      );
+
+      const summaryRow = el("div", { class: "day-summary" }, [
+        el("span", null, [
+          "Día ",
+          el("strong", null, selectedISO.split("-").reverse().join("/"))
+        ]),
+        el("div", { class: "small-pill-row" }, [
+          el("span", { class: "small-pill" }, [
+            "Hospedajes: ",
+            el("strong", null, dayStays.length.toString())
+          ])
+        ])
+      ]);
+
+      container.appendChild(summaryRow);
+
+      const listCard = el(
+        "div",
+        { class: "card card-tight", style: "margin-top:6px;" },
+        [
+          el("div", { class: "card-header" }, [
+            el("div", { class: "card-title" }, [
+              "Hospedajes del día",
+              el("span", { class: "chip" }, [
+                el("span", { class: "chip-dot" }),
+                "Programado / Activo / Completado"
+              ])
+            ]),
+            el(
+              "button",
+              {
+                class: "btn-ghost",
+                onclick: () => {
+                  state.modal = { type: "hospedaje", date: selectedISO };
+                  renderApp(document.getElementById("app"));
+                }
+              },
+              "+ nuevo"
+            )
+          ]),
+          el("div", { class: "scroll-area" }, [
+            dayStays.length === 0
+              ? el("div", { class: "empty-state" }, "No hay hospedajes para este día.")
+              : dayStays.map(renderStayItem)
+          ])
+        ]
+      );
+
+      const wrapper = el("div");
+      wrapper.appendChild(container);
+      wrapper.appendChild(listCard);
+      return wrapper;
+    }
+
+    function renderStayItem(h) {
+      const perro = state.perros.find((p) => p.id === h.perroId);
+      const initials = perro ? perro.nombre.charAt(0) : "?";
+      const statusClass = h.estado;
+      const statusLabel =
+        h.estado === "activo"
+          ? "Activo"
+          : h.estado === "completado"
+          ? "Completado"
+          : "Programado";
+
+      const pago = state.pagos.find((p) => p.hospedajeId === h.id);
+      const montoCalculado = calcularMonto(h.desde, h.hasta);
+
+      return el("div", { class: "stay-item" }, [
+        el("div", { class: "stay-avatar" }, initials),
+        el("div", { class: "stay-main" }, [
+          el("div", { class: "stay-name" }, perro ? perro.nombre : "Perro"),
+          el(
+            "div",
+            { class: "stay-meta" },
+            `Hab. ${h.habitacion} · ${h.desde.split("-").reverse().join("/")}` +
+                ` – ${h.hasta.split("-").reverse().join("/")} · ${formatCurrency(montoCalculado)}`
+          )
+        ]),
+        el("div", { style: "display:flex; gap:6px; align-items:center;" }, [
+          el("span", { class: `stay-status ${statusClass}` }, statusLabel),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              onclick: () => {
+                state.modal = { type: "hospedaje", hospedajeId: h.id };
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Editar"
+          ),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              style: "color: red;",
+              onclick: () => {
+                if (confirm(`¿Eliminar hospedaje de ${perro ? perro.nombre : "Perro"}?`)) {
+                  state.hospedajes = state.hospedajes.filter((x) => x.id !== h.id);
+                  saveState();
+                  renderApp(document.getElementById("app"));
+                }
+              }
+            },
+            "Eliminar"
+          )
+        ])
+      ]);
+    }
+
+    function renderPerrosView() {
+      const card = el("div", { class: "card card-tight" }, [
+        el("div", { class: "card-header" }, [
+          el("div", { class: "card-title" }, [
+            "Perros registrados",
+            el("span", { class: "chip" }, [
+              el("span", { class: "chip-dot" }),
+              "Perfil, notas, historial"
+            ])
+          ]),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              onclick: () => {
+                state.modal = { type: "perro" };
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "+ nuevo"
+          )
+        ]),
+        el("div", { class: "scroll-area" }, [
+          el(
+            "div",
+            { class: "pet-list" },
+            state.perros.map((p) => renderPetItem(p))
+          )
+        ])
+      ]);
+      return card;
+    }
+
+    function renderPetItem(p) {
+      const initials = p.nombre.charAt(0);
+      const activos = state.hospedajes.filter(
+        (h) => h.perroId === p.id && h.estado === "activo"
+      ).length;
+      const pendientes = state.pagos.filter(
+        (pay) => pay.perroId === p.id && pay.estado === "pendiente"
+      ).length;
+      const tam = p.tamano ? ` · ${p.tamano}` : "";
+
+      return el("div", { class: "pet-item" }, [
+        el("div", { class: "pet-avatar" }, p.foto ? el("img", { src: p.foto, style: "width:40px;height:40px;border-radius:50%;object-fit:cover;" }) : initials),
+        el("div", { class: "pet-main" }, [
+          el("div", { class: "pet-name" }, p.nombre),
+          el("div", { class: "pet-notes" }, p.cliente ? `Cliente: ${p.cliente}${tam}` : tam),
+          el("div", { class: "pet-tags" }, [
+            p.etiquetas.map((tag) => el("span", { class: "pet-tag" }, tag)),
+            activos
+              ? el("span", { class: "pet-tag" }, `Hospedajes activos: ${activos}`)
+              : null,
+            pendientes
+              ? el(
+                  "span",
+                  { class: "pet-tag" },
+                  `Pagos pendientes: ${pendientes}`
+                )
+              : null
+          ])
+        ]),
+        el("div", null, [
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              onclick: () => {
+                state.selectedPerroId = p.id;
+                state.modal = { type: "perfil-perro", perroId: p.id };
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Ver Perfil"
+          ),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              style: "color: red;",
+              onclick: () => {
+                if (confirm(`¿Eliminar a ${p.nombre}?`)) {
+                  state.perros = state.perros.filter((x) => x.id !== p.id);
+                  saveState();
+                  renderApp(document.getElementById("app"));
+                }
+              }
+            },
+            "Eliminar"
+          )
+        ])
+      ]);
+    }
+
+    function renderPagosView() {
+      const card = el("div", { class: "card card-tight" }, [
+        el("div", { class: "card-header" }, [
+          el("div", { class: "card-title" }, [
+            "Pagos",
+            el("span", { class: "chip" }, [
+              el("span", { class: "chip-dot" }),
+              "Pendientes y pagados"
+            ])
+          ]),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              onclick: () => {
+                state.modal = { type: "pago" };
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "+ nuevo pago"
+          )
+        ]),
+        el("div", { class: "pagos-toggle" }, [
+          el(
+            "button",
+            {
+              class: state.pagosFilter === "pendientes" ? "active" : "",
+              onclick: () => {
+                state.pagosFilter = "pendientes";
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Pendientes"
+          ),
+          el(
+            "button",
+            {
+              class: state.pagosFilter === "pagados" ? "active" : "",
+              onclick: () => {
+                state.pagosFilter = "pagados";
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Pagados"
+          ),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              onclick: () => {
+                state.modal = { type: "tarifa" };
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "⚙ Tarifas"
+          )
+        ]),
+        el("div", { class: "scroll-area" }, [renderPagosList(state.pagosFilter)])
+      ]);
+
+      return card;
+    }
+
+    function renderPagosList(filter) {
+      const todayISO = formatDateISO(state.today);
+      const list = state.pagos.filter((p) =>
+        filter === "pendientes" ? p.estado === "pendiente" : p.estado === "pagado"
+      );
+
+      if (list.length === 0) {
+        return el(
+          "div",
+          { class: "empty-state" },
+          filter === "pendientes"
+            ? "No hay pagos pendientes."
+            : "No hay pagos registrados como pagados."
+        );
+      }
+
+      return el(
+        "div",
+        null,
+        list.map((p) => {
+          const perro = state.perros.find((pet) => pet.id === p.perroId);
+          const vencido = p.estado === "pendiente" && p.vence < todayISO;
+          const statusClass = vencido
+            ? "vencido"
+            : p.estado === "pendiente"
+            ? "pendiente"
+            : "pagado";
+          const statusLabel = vencido
+            ? "Vencido"
+            : p.estado === "pendiente"
+            ? "Pendiente"
+            : "Pagado";
+
+          return el("div", { class: "payment-item" }, [
+            el("div", { class: "payment-main" }, [
+              el("div", { class: "payment-name" }, perro ? perro.nombre : "Perro"),
+              el("div", { class: "payment-meta" }, [
+                `Vence: ${p.vence.split("-").reverse().join("/")}`,
+                " · ",
+                el("span", { class: `payment-status-pill ${statusClass}` }, [
+                  statusLabel
+                ])
+              ]),
+              p.notas ? el("div", { class: "payment-notes" }, p.notas) : null
+            ]),
+            el("div", { style: "text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end;" }, [
+              (function(){
+                const montoEntregado = typeof p.montoEntregado === 'number' ? p.montoEntregado : (p.montoEntregado ? Number(p.montoEntregado) : 0);
+                const montoRestante = p.monto - montoEntregado;
+                return el("div", null, [
+                  el("div", { class: "payment-amount" }, [
+                    formatCurrency(p.monto),
+                    montoEntregado > 0 ? el("span", { style: "color:green; font-size:13px; margin-left:8px;" }, `- ${formatCurrency(montoEntregado)} entregado`) : null,
+                    el("div", { style: "font-size:13px; color:#555;" }, `Restante: ${formatCurrency(montoRestante)}`)
+                  ]),
+                  el("input", {
+                    type: "number",
+                    min: 0,
+                    max: p.monto,
+                    value: montoEntregado,
+                    style: "width:90px; margin-top:4px;",
+                    onchange: (e) => {
+                      p.montoEntregado = Number(e.target.value) || 0;
+                      saveState();
+                      renderApp(document.getElementById("app"));
+                    }
+                  }),
+                  el("div", null, [
+                    filter === "pendientes"
+                      ? el(
+                          "button",
+                          {
+                            class: "btn-primary btn-small",
+                            onclick: () => {
+                              p.estado = "pagado";
+                              saveState();
+                              renderApp(document.getElementById("app"));
+                            }
+                          },
+                          "Marcar pagado"
+                        )
+                      : null,
+                    el(
+                      "button",
+                      {
+                        class: "btn-ghost",
+                        onclick: () => {
+                          state.modal = { type: "pago", pagoId: p.id };
+                          renderApp(document.getElementById("app"));
+                        }
+                      },
+                      "Editar"
+                    ),
+                    el(
+                      "button",
+                      {
+                        class: "btn-ghost",
+                        style: "color: red;",
+                        onclick: () => {
+                          if (confirm(`¿Eliminar pago de ${formatCurrency(p.monto)}?`)) {
+                            state.pagos = state.pagos.filter((x) => x.id !== p.id);
+                            saveState();
+                            renderApp(document.getElementById("app"));
+                          }
+                        }
+                      },
+                      "Eliminar"
+                    )
+                  ])
+                ]);
+              })()
+            ])
+          ]);
+        })
+      );
+    }
+
+    function renderTareasView() {
+      const card = el("div", { class: "card card-tight" }, [
+        el("div", { class: "card-header" }, [
+          el("div", { class: "card-title" }, [
+            "Tareas del equipo",
+            el("span", { class: "chip" }, [
+              el("span", { class: "chip-dot" }),
+              "Paseos, baños, limpieza"
+            ])
+          ]),
+          el(
+            "button",
+            {
+              class: "btn-ghost",
+              onclick: () => {
+                state.modal = { type: "tarea" };
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "+ nueva"
+          )
+        ]),
+        el("div", { class: "task-filters" }, [
+          el(
+            "button",
+            {
+              class: `btn-ghost ${state.tareasFilter === "todas" ? "active-filter" : ""}`,
+              onclick: () => {
+                state.tareasFilter = "todas";
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Todas"
+          ),
+          el(
+            "button",
+            {
+              class: `btn-ghost ${state.tareasFilter === "pendientes" ? "active-filter" : ""}`,
+              onclick: () => {
+                state.tareasFilter = "pendientes";
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Pendientes"
+          ),
+          el(
+            "button",
+            {
+              class: `btn-ghost ${state.tareasFilter === "hoy" ? "active-filter" : ""}`,
+              onclick: () => {
+                state.tareasFilter = "hoy";
+                renderApp(document.getElementById("app"));
+              }
+            },
+            "Hoy"
+          )
+        ]),
+        el("div", { class: "scroll-area" }, [renderTareasList()])
+      ]);
+
+      return card;
+    }
+
+    function renderTareasList() {
+      const todayISO = formatDateISO(state.today);
+
+      let list = state.tareas.slice();
+      if (state.tareasFilter === "pendientes") {
+        list = list.filter((t) => t.estado !== "hecha");
+      } else if (state.tareasFilter === "hoy") {
+        list = list.filter((t) => t.fecha === todayISO);
+      }
+
+      if (list.length === 0) {
+        return el(
+          "div",
+          { class: "empty-state" },
+          "No hay tareas para este filtro."
+        );
+      }
+
+      return el(
+        "div",
+        null,
+        list.map((t) => {
+          const statusClass = t.estado;
+          const statusLabel =
+            t.estado === "pendiente"
+              ? "Pendiente"
+              : t.estado === "en-curso"
+              ? "En curso"
+              : "Hecha";
+
+          return el("div", { class: "task-item" }, [
+            el(
+              "button",
+              {
+                class: "task-checkbox",
+                onclick: () => {
+                    if (t.estado === "hecha") {
+                      t.estado = "pendiente";
+                    } else {
+                      t.estado = "hecha";
+                    }
+                    saveState();
+                    renderApp(document.getElementById("app"));
+                }
+              },
+              t.estado === "hecha" ? "✓" : ""
+            ),
+            el("div", { class: "task-main" }, [
+              el("div", { class: "task-title" }, t.titulo),
+              el("div", { class: "task-meta" }, [
+                el("span", null, [
+                  `Fecha: ${t.fecha.split("-").reverse().join("/")}`,
+                  " · ",
+                  `Asignado a ${t.asignadoA}`
+                ]),
+                el("span", { class: `task-status-pill ${statusClass}` }, statusLabel)
+              ])
+            ]),
+            el(
+              "button",
+              {
+                class: "btn-ghost",
+                style: "color: red; margin-left: 8px;",
+                onclick: () => {
+                  if (confirm(`¿Eliminar tarea "${t.titulo}"?`)) {
+                    state.tareas = state.tareas.filter((x) => x.id !== t.id);
+                    saveState();
+                    renderApp(document.getElementById("app"));
+                  }
+                }
+              },
+              "✕"
+            )
+          ]);
+        })
+      );
+    }
+
+    function renderModal() {
+      const close = () => {
+        state.modal = null;
+        renderApp(document.getElementById("app"));
+      };
+
+      const backdrop = el(
+        "div",
+        {
+          class: "modal-backdrop",
+          onclick: (e) => {
+            if (e.target === e.currentTarget) close();
+          }
+        },
+        [renderModalContent(close)]
+      );
+
+      return backdrop;
+    }
+
+    function renderModalContent(close) {
+      if (!state.modal) return el("div");
+      if (state.modal.type === "hospedaje") return renderHospedajeModal(close);
+      if (state.modal.type === "tarea") return renderTareaModal(close);
+      if (state.modal.type === "pago") return renderPagoModal(close);
+      if (state.modal.type === "perro") return renderPerroModal(close);
+      if (state.modal.type === "tarifa") return renderTarifaModal(close);
+      if (state.modal.type === "perfil-perro") return renderPerfilPerroModal(close);
+      return el("div");
+    }
+
+    function renderHospedajeModal(close) {
+      const sheet = el("div", { class: "modal-sheet" });
+      const hospedajeId = state.modal && state.modal.hospedajeId ? state.modal.hospedajeId : null;
+      const existing = hospedajeId ? state.hospedajes.find((x) => x.id === hospedajeId) : null;
+
+      const desdeInput = el("input", {
+        type: "date",
+        value: state.modal.date || (existing ? existing.desde : formatDateISO(state.today))
+      });
+      const hastaInput = el("input", {
+        type: "date",
+        value: state.modal.date || (existing ? existing.hasta : formatDateISO(state.today))
+      });
+
+      const perroSelect = el(
+        "select",
+        null,
+        state.perros.map((p) => el("option", { value: p.id }, p.nombre))
+      );
+
+      const habInput = el("input", {
+        type: "text",
+        placeholder: "Suite / Habitación",
+        value: existing ? existing.habitacion : ""
+      });
+
+      if (existing) {
+        perroSelect.value = existing.perroId;
+      }
+
+      const save = () => {
+        const perroId = parseInt(perroSelect.value, 10);
+        const desde = desdeInput.value;
+        const hasta = hastaInput.value;
+        const habitacion = habInput.value || "Hab. 1";
+        if (!perroId || !desde || !hasta) {
+          alert("Completa perro y fechas.");
+          return;
+        }
+        if (existing) {
+          existing.perroId = perroId;
+          existing.desde = desde;
+          existing.hasta = hasta;
+          existing.habitacion = habitacion;
+          // Actualizar pago relacionado
+          const pago = state.pagos.find((p) => p.hospedajeId === existing.id);
+          if (pago) {
+            pago.monto = calcularMonto(desde, hasta);
+          }
+          saveState();
+        } else {
+          state.hospedajes.push({
+            id: Date.now(),
+            perroId,
+            desde,
+            hasta,
+            habitacion,
+            estado: "programado"
+          });
+          // Crear pago automático
+          const nuevoHospedajeId = Date.now();
+          const monto = calcularMonto(desde, hasta);
+          const noches = calcularNoches(desde, hasta);
+          state.pagos.push({
+            id: Date.now() + 1,
+            perroId,
+            monto,
+            vence: hasta,
+            hospedajeId: nuevoHospedajeId,
+            estado: "pendiente",
+            notas: `Pago por hospedaje ${noches} noches`
+          });
+          state.hospedajes[state.hospedajes.length - 1].id = nuevoHospedajeId;
+          saveState();
+        }
+        close();
+      };
+
+      sheet.appendChild(
+        el("div", { class: "modal-header" }, [
+          el("div", { class: "modal-title" }, existing ? "Editar hospedaje" : "Nuevo hospedaje"),
+          el(
+            "button",
+            {
+              class: "btn-icon",
+              onclick: close
+            },
+            "✕"
+          )
+        ])
+      );
+
+      sheet.appendChild(
+        el("div", { class: "modal-body" }, [
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Perro"),
+            perroSelect
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Desde"),
+            desdeInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Hasta"),
+            hastaInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Habitación"),
+            habInput
+          ]),
+          el("div", { class: "modal-actions" }, [
+            el("button", { class: "btn-ghost", onclick: close }, "Cancelar"),
+            el("button", { class: "btn-primary", onclick: save }, "Guardar")
+          ])
+        ])
+      );
+
+      return sheet;
+    }
+
+    function renderPagoModal(close) {
+      const sheet = el("div", { class: "modal-sheet" });
+      const pagoId = state.modal && state.modal.pagoId ? state.modal.pagoId : null;
+      const existing = pagoId ? state.pagos.find((x) => x.id === pagoId) : null;
+
+      const perroSelect = el(
+        "select",
+        null,
+        state.perros.map((p) => el("option", { value: p.id }, p.nombre))
+      );
+      const montoInput = el("input", {
+        type: "number",
+        placeholder: "Monto",
+        min: "0",
+        step: "0.01",
+        value: existing ? existing.monto : ""
+      });
+      const venceInput = el("input", {
+        type: "date",
+        value: existing ? existing.vence : formatDateISO(state.today)
+      });
+      const notasInput = el("input", {
+        type: "text",
+        placeholder: "Notas (opcional)",
+        value: existing && existing.notas ? existing.notas : ""
+      });
+      const estadoSelect = el(
+        "select",
+        null,
+        ["pendiente", "pagado"].map((s) => el("option", { value: s }, s))
+      );
+
+      if (existing) {
+        perroSelect.value = existing.perroId;
+        estadoSelect.value = existing.estado || "pendiente";
+      }
+
+      const save = () => {
+        const perroId = parseInt(perroSelect.value, 10);
+        const monto = parseFloat(montoInput.value);
+        const vence = venceInput.value;
+        const notas = notasInput.value.trim();
+        const estado = estadoSelect.value;
+
+        if (!perroId || !monto || monto <= 0 || !vence) {
+          alert("Completa todos los campos correctamente.");
+          return;
+        }
+
+        if (existing) {
+          existing.perroId = perroId;
+          existing.monto = monto;
+          existing.vence = vence;
+          existing.notas = notas;
+          existing.estado = estado;
+        } else {
+          state.pagos.push({
+            id: Date.now(),
+            perroId,
+            monto,
+            vence,
+            notas,
+            estado: estado || "pendiente"
+          });
+        }
+        saveState();
+        close();
+      };
+
+      sheet.appendChild(
+        el("div", { class: "modal-header" }, [
+          el("div", { class: "modal-title" }, existing ? "Editar pago" : "Nuevo pago"),
+          el(
+            "button",
+            {
+              class: "btn-icon",
+              onclick: close
+            },
+            "✕"
+          )
+        ])
+      );
+
+      sheet.appendChild(
+        el("div", { class: "modal-body" }, [
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Perro"),
+            perroSelect
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Monto (Gs)"),
+            montoInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Fecha de vencimiento"),
+            venceInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Notas"),
+            notasInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Estado"),
+            estadoSelect
+          ]),
+          el("div", { class: "modal-actions" }, [
+            el("button", { class: "btn-ghost", onclick: close }, "Cancelar"),
+            el("button", { class: "btn-primary", onclick: save }, "Guardar")
+          ])
+        ])
+      );
+
+      return sheet;
+    }
+
+    function renderPerroModal(close) {
+      const sheet = el("div", { class: "modal-sheet" });
+      const perroId = state.modal && state.modal.perroId ? state.modal.perroId : null;
+      const existing = perroId ? state.perros.find((p) => p.id === perroId) : null;
+
+      const nombreInput = el("input", { type: "text", placeholder: "Nombre", value: existing ? existing.nombre : "" });
+      const clienteInput = el("input", { type: "text", placeholder: "Nombre del cliente", value: existing ? existing.cliente : "" });
+      const telInput = el("input", { type: "text", placeholder: "Teléfono", value: existing ? (existing.cliente_telefono || "") : "" });
+      const emailInput = el("input", { type: "email", placeholder: "Email", value: existing ? (existing.cliente_email || "") : "" });
+      const notasInput = el("input", { type: "text", placeholder: "Notas", value: existing ? existing.notas : "" });
+      const etiquetasInput = el("input", { type: "text", placeholder: "Etiquetas (separadas por comas)", value: existing ? (existing.etiquetas || []).join(", ") : "" });
+      const tamanoSelect = el("select", null, [
+        el("option", { value: "Pequeño" }, "Pequeño"),
+        el("option", { value: "Mediano" }, "Mediano"),
+        el("option", { value: "Grande" }, "Grande")
+      ]);
+
+      // Manejo de adjuntos (imágenes) en la ficha médica
+      const tempAdjuntos = existing && existing.adjuntos ? existing.adjuntos.slice() : [];
+      // Foto principal (se muestra junto al nombre)
+      let tempPhoto = existing && existing.foto ? existing.foto : null;
+      const photoPreview = el("div", { style: "margin-bottom:8px;" }, tempPhoto ? el("img", { src: tempPhoto, style: "width:80px;height:80px;object-fit:cover;border-radius:8px;" }) : null);
+      const photoInput = el("input", { type: "file", accept: "image/*", onchange: (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          tempPhoto = reader.result;
+          photoPreview.innerHTML = '';
+          photoPreview.appendChild(el('img', { src: reader.result, style: 'width:80px;height:80px;object-fit:cover;border-radius:8px;' }));
+        };
+        reader.readAsDataURL(file);
+      } });
+      const adjContainer = el("div", { class: "adj-container" }, tempAdjuntos.map(a => {
+        return el("div", { class: "adj-row" }, [
+          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
+          el("div", { style: "flex:1;margin-left:8px;" }, a.nombre),
+          el("button", { class: "btn-ghost", onclick: () => { const idx = tempAdjuntos.findIndex(x=>x.id===a.id); if(idx>=0){ tempAdjuntos.splice(idx,1); adjContainer.innerHTML = ''; tempAdjuntos.forEach(x=> adjContainer.appendChild(renderAdjItem(x))); } } }, "Eliminar")
+        ]);
+      }));
+
+      function renderAdjItem(a) {
+        return el("div", { class: "adj-row" }, [
+          a.data ? el("img", { src: a.data, style: "width:56px;height:56px;object-fit:cover;border-radius:6px;" }) : el("div", { style: "width:56px;height:56px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;" }, "📄"),
+          el("div", { style: "flex:1;margin-left:8px;" }, a.nombre),
+          el("button", { class: "btn-ghost", onclick: () => { const idx = tempAdjuntos.findIndex(x=>x.id===a.id); if(idx>=0){ tempAdjuntos.splice(idx,1); adjContainer.innerHTML = ''; tempAdjuntos.forEach(x=> adjContainer.appendChild(renderAdjItem(x))); } } }, "Eliminar")
+        ]);
+      }
+
+      const fileInput = el("input", { type: "file", accept: "image/*", onchange: (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const obj = { id: Date.now(), nombre: file.name, tipo: file.type, data: reader.result };
+          tempAdjuntos.push(obj);
+          adjContainer.appendChild(renderAdjItem(obj));
+        };
+        reader.readAsDataURL(file);
+      } });
+
+      const save = () => {
+        const nombre = nombreInput.value.trim();
+        const cliente = clienteInput.value.trim();
+        const cliente_telefono = telInput.value.trim();
+        const cliente_email = emailInput.value.trim();
+        const notas = notasInput.value.trim();
+        const etiquetas = etiquetasInput.value.split(",").map(s=>s.trim()).filter(Boolean);
+        const tamano = tamanoSelect.value || (existing && existing.tamano) || "Mediano";
+
+        if (!nombre) { alert("Ingresa el nombre del perro."); return; }
+
+        if (existing) {
+          existing.nombre = nombre;
+          existing.cliente = cliente;
+          existing.cliente_telefono = cliente_telefono;
+          existing.cliente_email = cliente_email;
+          existing.notas = notas;
+          existing.etiquetas = etiquetas;
+          existing.tamano = tamano;
+          existing.adjuntos = tempAdjuntos;
+          existing.foto = tempPhoto || existing.foto || null;
+        } else {
+          state.perros.push({
+            id: Date.now(),
+            nombre,
+            cliente,
+            cliente_telefono,
+            cliente_email,
+            notas,
+            etiquetas,
+            tamano,
+            adjuntos: tempAdjuntos,
+            foto: tempPhoto || null
+          });
+        }
+        saveState();
+        close();
+      };
+
+      sheet.appendChild(el("div", { class: "modal-header" }, [ el("div", { class: "modal-title" }, existing ? "Editar perro" : "Nuevo perro"), el("button", { class: "btn-icon", onclick: close }, "✕") ]));
+      // Prefill tamaño if editing
+      if (existing && existing.tamano) tamanoSelect.value = existing.tamano;
+
+      sheet.appendChild(el("div", { class: "modal-body" }, [
+        el("div", { class: "modal-field" }, [ el("label", null, "Nombre"), nombreInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Cliente"), clienteInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Teléfono"), telInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Email"), emailInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Notas"), notasInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Etiquetas"), etiquetasInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Foto (aparecerá junto al nombre)"), photoPreview, photoInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Ficha médica (adjuntar imágenes)"), fileInput, adjContainer ]),
+        el("div", { class: "modal-actions" }, [ el("button", { class: "btn-ghost", onclick: close }, "Cancelar"), el("button", { class: "btn-primary", onclick: save }, "Guardar") ])
+      ]));
+
+      return sheet;
+    }
+
+    function renderTarifaModal(close) {
+      const sheet = el("div", { class: "modal-sheet" });
+      const precioInput = el("input", {
+        type: "number",
+        placeholder: "Precio por noche (Gs)",
+        min: "0",
+        step: "1",
+        value: state.tarifa.precioNoche
+      });
+      const temporadaInput = el("input", {
+        type: "number",
+        placeholder: "Descuento/Aumento temporada (%)",
+        min: "-100",
+        max: "100",
+        step: "1",
+        value: state.tarifa.precioTemporada
+      });
+
+      const save = () => {
+        const precio = parseFloat(precioInput.value);
+        if (!precio || precio <= 0) {
+          alert("Ingresa un precio válido.");
+          return;
+        }
+        state.tarifa.precioNoche = precio;
+        state.tarifa.precioTemporada = parseFloat(temporadaInput.value) || 0;
+        saveState();
+        alert("Tarifas actualizadas correctamente.");
+        close();
+      };
+
+      sheet.appendChild(el("div", { class: "modal-header" }, [ el("div", { class: "modal-title" }, "Configurar Tarifas"), el("button", { class: "btn-icon", onclick: close }, "✕") ]));
+      sheet.appendChild(el("div", { class: "modal-body" }, [
+        el("div", { class: "modal-field" }, [ el("label", null, "Precio por noche (Gs)"), precioInput ]),
+        el("div", { class: "modal-field" }, [ el("label", null, "Ajuste temporada (%)"), temporadaInput ]),
+        el("div", { class: "modal-actions" }, [ el("button", { class: "btn-ghost", onclick: close }, "Cancelar"), el("button", { class: "btn-primary", onclick: save }, "Guardar") ])
+      ]));
+
+      return sheet;
+    }
+
+    function renderPerfilPerroModal(close) {
+      const perroId = state.modal && state.modal.perroId ? state.modal.perroId : null;
+      const perro = perroId ? state.perros.find((p) => p.id === perroId) : null;
+
+      if (!perro) return el("div");
+
+      const sheet = el("div", { class: "modal-sheet" });
+      const hospedajesDelPerro = state.hospedajes.filter((h) => h.perroId === perroId);
+      const pagosDelPerro = state.pagos.filter((p) => p.perroId === perroId);
+
+      sheet.appendChild(el("div", { class: "modal-header" }, [
+        el("div", { class: "modal-title" }, `${perro.nombre} - Perfil`),
+        el("button", { class: "btn-icon", onclick: close }, "✕")
+      ]));
+
+      sheet.appendChild(el("div", { class: "modal-body" }, [
+        el("div", { class: "modal-section" }, [
+          el("h4", null, "Información General"),
+          el("p", null, `Nombre: ${perro.nombre}`),
+          el("p", null, `Cliente: ${perro.cliente}`),
+          el("p", null, `Teléfono: ${perro.cliente_telefono || "-"}`),
+          el("p", null, `Email: ${perro.cliente_email || "-"}`),
+          el("p", null, `Tamaño: ${perro.tamano || "-"}`),
+          el("p", null, `Notas: ${perro.notas}`)
+        ]),
+        el("div", { class: "modal-section" }, [
+          el("h4", null, "Hospedajes"),
+          hospedajesDelPerro.length === 0
+            ? el("p", null, "No hay hospedajes registrados.")
+            : hospedajesDelPerro.map((h) =>
+              el("div", { style: "margin:6px 0; font-size:11px; padding:6px; background:#f0f0f0; border-radius:6px;" }, [
+                `${h.desde} a ${h.hasta} · Hab. ${h.habitacion} · Estado: ${h.estado}`
+              ])
+            )
+        ]),
+        el("div", { class: "modal-section" }, [
+          el("h4", null, "Pagos"),
+          pagosDelPerro.length === 0
+            ? el("p", null, "No hay pagos registrados.")
+            : pagosDelPerro.map((p) =>
+              el("div", { style: "margin:6px 0; font-size:11px; padding:6px; background:#f0f0f0; border-radius:6px;" }, [
+                `${formatCurrency(p.monto)} · Vence: ${p.vence} · ${p.estado}`
+              ])
+            )
+        ]),
+        el("div", { class: "modal-section" }, [
+          el("h4", null, "Documentos Adjuntos"),
+          perro.adjuntos && perro.adjuntos.length > 0
+            ? el("div", { style: "display:flex;flex-wrap:wrap;gap:8px;" }, perro.adjuntos.map((adj) =>
+              el("div", { style: "width:120px; padding:6px; background:#f8f9fa; border-radius:8px; text-align:center;" }, [
+                adj.data ? el("img", { src: adj.data, style: "width:100%; height:80px; object-fit:cover; border-radius:6px;", onclick: () => { const w = window.open(); w.document.write('<img src="'+adj.data+'" style="max-width:100%;">'); } }) : el("div", { style: "height:80px; display:flex; align-items:center; justify-content:center;" }, "📄"),
+                el("div", { style: "font-size:12px; margin-top:6px;" }, adj.nombre)
+              ])
+            ))
+            : el("p", null, "No hay documentos adjuntos.")
+        ]),
+        el("div", { class: "modal-actions" }, [
+          el("button", { class: "btn", onclick: () => {
+            state.modal = { type: "perro", perroId: perroId };
+            renderApp(document.getElementById("app"));
+          }}, "Editar Perro"),
+          el("button", { class: "btn-ghost", onclick: close }, "Cerrar")
+        ])
+      ]));
+
+      return sheet;
+    }
+
+    function renderTareaModal(close) {
+      const sheet = el("div", { class: "modal-sheet" });
+      const tituloInput = el("input", {
+        type: "text",
+        placeholder: "Título de la tarea"
+      });
+      const fechaInput = el("input", {
+        type: "date",
+        value: formatDateISO(state.today)
+      });
+      const personaInput = el("input", {
+        type: "text",
+        placeholder: "Asignado a (nombre)"
+      });
+
+      const save = () => {
+        const titulo = tituloInput.value.trim();
+        const fecha = fechaInput.value;
+        const asignadoA = personaInput.value.trim() || "Equipo";
+
+        if (!titulo || !fecha) {
+          alert("Completa el título y la fecha.");
+          return;
+        }
+
+        state.tareas.push({
+          id: Date.now(),
+          titulo,
+          fecha,
+          asignadoA,
+          estado: "pendiente"
+        });
+          saveState();
+          close();
+      };
+
+      sheet.appendChild(
+        el("div", { class: "modal-header" }, [
+          el("div", { class: "modal-title" }, "Nueva tarea"),
+          el(
+            "button",
+            {
+              class: "btn-icon",
+              onclick: close
+            },
+            "✕"
+          )
+        ])
+      );
+
+      sheet.appendChild(
+        el("div", { class: "modal-body" }, [
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Título"),
+            tituloInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Fecha"),
+            fechaInput
+          ]),
+          el("div", { class: "modal-field" }, [
+            el("label", null, "Asignado a"),
+            personaInput
+          ]),
+          el("div", { class: "modal-actions" }, [
+            el("button", { class: "btn-ghost", onclick: close }, "Cancelar"),
+            el("button", { class: "btn-primary", onclick: save }, "Guardar")
+          ])
+        ])
+      );
+
+      return sheet;
+    }
+
+    // ===== Main App =====
+    function renderApp(root) {
+      root.innerHTML = "";
+      const shell = el("div", { class: "app-shell" });
+
+      shell.appendChild(renderHeader());
+      shell.appendChild(renderTabs());
+      shell.appendChild(renderContent());
+
+      root.appendChild(shell);
+
+      if (state.modal) {
+        root.appendChild(renderModal());
+      }
+    }
+
+    function renderHeader() {
+      const todayCount = state.hospedajes.filter((h) => {
+        const todayISO = state.today.toISOString().split("T")[0];
+        return todayISO >= h.desde && todayISO <= h.hasta;
+      }).length;
+
+      // Botón de recarga compacto (solo icono, tooltip)
+      const reloadBtn = el("button", {
+        class: "btn-ghost reload-btn",
+        title: "Recargar datos del servidor",
+        style: "margin-left:8px;padding:4px 8px;display:flex;align-items:center;justify-content:center;",
+        onclick: async (e) => {
+          e.preventDefault();
+          await loadState();
+          state.selectedDate = state.selectedDate ? new Date(state.selectedDate) : new Date(state.today);
+          renderApp(document.getElementById("app"));
+        }
+      }, [
+        el("span", { style: "font-size:18px;line-height:1;" }, "⟳")
+      ]);
+
+      return el("header", { class: "app-header" }, [
+        el("div", { class: "logo-group" }, [
+          (function(){
+            const ns = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(ns, "svg");
+            svg.setAttribute("viewBox", "0 0 200 80");
+            svg.setAttribute("class", "logo-image");
+            svg.innerHTML = `
+              <defs>
+                <linearGradient id="g1" x1="0" x2="1">
+                  <stop offset="0" stop-color="#7bb6ff"/>
+                  <stop offset="1" stop-color="#a8d8ea"/>
+                </linearGradient>
+              </defs>
+              <g fill="none" fill-rule="evenodd">
+                <rect width="200" height="80" rx="8" fill="white"/>
+                <g transform="translate(12,8)">
+                  <circle cx="28" cy="28" r="24" fill="url(#g1)" />
+                  <path d="M16 34c6-8 20-6 24-2 6 6 2 12-6 14-8 2-20-8-18-12z" fill="#0f2b5a" opacity="0.95" />
+                  <path d="M34 18c4-2 8-1 12 2 2 2 1 6-3 6-4 0-9-6-9-8z" fill="#ffffff" opacity="0.9" />
+                </g>
+                <text x="88" y="46" font-family="Segoe UI, Roboto, sans-serif" font-size="28" fill="#2c3e50" font-weight="700">NUBA</text>
+              </g>
+            `;
+            return svg;
+          })(),
+          el("div", { class: "logo-text-block" }, [
+            el("span", { class: "logo-text-main" }, "NUBA"),
+            el("span", { class: "logo-text-sub" }, "Guardería Canina")
+          ])
+        ]),
+        el("div", { style: "display:flex;align-items:center;gap:8px;" }, [
+          el("div", null, [
+            el("div", { class: "badge-pill" }, [
+              el("span", { class: "badge-dot" }),
+              `${todayCount} hospedajes hoy`
+            ]),
+            el("div", { style: "font-size:11px;color:#888;margin-top:4px;text-align:center;font-weight:500;" }, 
+              new Date(state.today).toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+            )
+          ]),
+          reloadBtn
+        ])
+      ]);
+    }
+
+    function renderTabs() {
+      const tabs = [
+        { id: "calendario", label: "Calendario" },
+        { id: "perros", label: "Perros" },
+        { id: "pagos", label: "Pagos" },
+        { id: "tareas", label: "Tareas" }
+      ];
+
+      const counts = {
+        calendario: state.hospedajes.filter((h) => h.estado === "activo").length,
+        perros: state.perros.length,
+        pagos: state.pagos.filter((p) => p.estado === "pendiente").length,
+        tareas: state.tareas.filter((t) => t.estado !== "hecha").length
+      };
+
+      return el(
+        "nav",
+        { class: "app-tabs" },
+        tabs.map((tab) =>
+          el(
+            "button",
+            {
+              class: `tab-pill ${state.activeTab === tab.id ? "active" : ""}`,
+              onclick: () => {
+                state.activeTab = tab.id;
+                renderApp(document.getElementById("app"));
+              }
+            },
+            [
+              el("span", null, [
+                tab.label,
+                el("span", { class: "tab-badge" }, counts[tab.id] || 0)
+              ])
+            ]
+          )
+        )
+      );
+    }
+
+    function renderContent() {
+      const content = el("main", { class: "app-content" });
+      let view;
+      switch (state.activeTab) {
+        case "calendario":
+          view = renderCalendarioView();
+          break;
+        case "perros":
+          view = renderPerrosView();
+          break;
+        case "pagos":
+          view = renderPagosView();
+          break;
+        case "tareas":
+          view = renderTareasView();
+          break;
+        default:
+          view = el("div");
+      }
+      content.appendChild(view);
+      return content;
+    }
+
+    // Initial setup
+    window.addEventListener("DOMContentLoaded", async () => {
+      await loadState();
+      state.selectedDate = state.selectedDate ? new Date(state.selectedDate) : new Date(state.today);
+      renderApp(document.getElementById("app"));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+﻿VERIFICATION REPORT - 2025-12-07 20:49:39
+Tarifa por noche: Gs 60000
+Perro de prueba creado: ID=1765140579, Nombre=PruebaBot, Tamano=Mediano
+Adjunto aÃ±adido: placeholder.png (data URL length: 114)
+Hospedaje creado: ID=1765140589, Desde=2025-12-08, Hasta=2025-12-10, Noches=2
+Pago creado: ID=1765140590, Monto=Gs 120.000, Vence=2025-12-10
+CÃ¡lculo OK: monto coincide con noches Ã— tarifa
