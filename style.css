@@ -464,6 +464,7 @@ select:focus {
   font-weight: 600;
 }
 
+<<<<<<< HEAD
 .pet-name-tag {
   background: var(--color-secondary);
   color: white;
@@ -481,6 +482,8 @@ select:focus {
   margin: 1px;
 }
 
+=======
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
 .day-summary {
   display: flex;
   justify-content: space-between;

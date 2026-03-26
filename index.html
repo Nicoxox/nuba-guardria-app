@@ -170,14 +170,24 @@
         {
           id: 2,
           titulo: "Baño Max",
+<<<<<<< HEAD
           fecha: "2026-03-26",
           asignadoA: "Luis",
           estado: "pendiente"
+=======
+          fecha: "2025-12-07",
+          asignadoA: "Luis",
+          estado: "en-curso"
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
         },
         {
           id: 3,
           titulo: "Limpieza Suite 2",
+<<<<<<< HEAD
           fecha: "2026-03-20",
+=======
+          fecha: "2025-12-06",
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
           asignadoA: "Equipo",
           estado: "hecha"
         }
@@ -267,7 +277,11 @@
             const obj = snapshot.data();
             if (obj) {
               state.activeTab = obj.activeTab || state.activeTab;
+<<<<<<< HEAD
               state.today = new Date(); // Siempre usar fecha actual del sistema, ignorar Firebase
+=======
+              state.today = obj.today ? new Date(obj.today) : state.today;
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
               state.calendarMonthOffset = obj.calendarMonthOffset || state.calendarMonthOffset;
               state.selectedDate = obj.selectedDate ? new Date(obj.selectedDate) : state.selectedDate;
               state.pagosFilter = obj.pagosFilter || state.pagosFilter;
@@ -341,7 +355,11 @@
         ])
       ]);
 
+<<<<<<< HEAD
       const weekdaysRow = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((d) =>
+=======
+      const weekdaysRow = ["L", "M", "X", "J", "V", "S", "D"].map((d) =>
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
         el("div", { class: "calendar-weekday" }, d)
       );
 
@@ -387,6 +405,7 @@
                   staysOnDay.length > 9 ? "9+" : staysOnDay.length
                 )
               : null,
+<<<<<<< HEAD
             hasStays
               ? el(
                   "div",
@@ -397,6 +416,18 @@
                       "span",
                       { class: "pet-name-tag", title: perro ? perro.nombre : "Perro" },
                       perro ? perro.nombre : "?"
+=======
+            hasStays && staysOnDay.length <= 2
+              ? el(
+                  "div",
+                  { class: "calendar-day-pets" },
+                  staysOnDay.slice(0, 2).map((h) => {
+                    const perro = state.perros.find((p) => p.id === h.perroId);
+                    return el(
+                      "span",
+                      { class: "pet-dot", title: perro ? perro.nombre : "Perro" },
+                      perro ? perro.nombre.charAt(0) : "?"
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
                     );
                   })
                 )
@@ -1426,10 +1457,13 @@
             : el("p", null, "No hay documentos adjuntos.")
         ]),
         el("div", { class: "modal-actions" }, [
+<<<<<<< HEAD
           el("button", { class: "btn", onclick: () => {
             state.modal = { type: "perro", perroId: perroId };
             renderApp(document.getElementById("app"));
           }}, "Editar Perro"),
+=======
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
           el("button", { class: "btn-ghost", onclick: close }, "Cerrar")
         ])
       ]));
@@ -1580,6 +1614,7 @@
           ])
         ]),
         el("div", { style: "display:flex;align-items:center;gap:8px;" }, [
+<<<<<<< HEAD
           el("div", null, [
             el("div", { class: "badge-pill" }, [
               el("span", { class: "badge-dot" }),
@@ -1588,6 +1623,11 @@
             el("div", { style: "font-size:11px;color:#888;margin-top:4px;text-align:center;font-weight:500;" }, 
               new Date(state.today).toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
             )
+=======
+          el("div", { class: "badge-pill" }, [
+            el("span", { class: "badge-dot" }),
+            `${todayCount} hospedajes hoy`
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
           ]),
           reloadBtn
         ])

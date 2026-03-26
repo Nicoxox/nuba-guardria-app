@@ -89,14 +89,24 @@ export const state = {
     {
       id: 2,
       titulo: "Baño Max",
+<<<<<<< HEAD
       fecha: "2026-03-26",
       asignadoA: "Luis",
       estado: "pendiente"
+=======
+      fecha: "2025-12-07",
+      asignadoA: "Luis",
+      estado: "en-curso"
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
     },
     {
       id: 3,
       titulo: "Limpieza Suite 2",
+<<<<<<< HEAD
       fecha: "2026-03-20",
+=======
+      fecha: "2025-12-06",
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
       asignadoA: "Equipo",
       estado: "hecha"
     }
@@ -165,7 +175,11 @@ export async function loadState() {
         const obj = snapshot.data();
         if (obj) {
           state.activeTab = obj.activeTab || state.activeTab;
+<<<<<<< HEAD
           state.today = new Date(); // Siempre usar fecha actual del sistema, ignorar Firebase
+=======
+          state.today = obj.today ? new Date(obj.today) : state.today;
+>>>>>>> c8377fdbcbb9f0a43507594fd44472ab978ad087
           state.calendarMonthOffset = obj.calendarMonthOffset || state.calendarMonthOffset;
           state.selectedDate = obj.selectedDate ? new Date(obj.selectedDate) : state.selectedDate;
           state.pagosFilter = obj.pagosFilter || state.pagosFilter;
